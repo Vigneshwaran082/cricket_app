@@ -20,12 +20,14 @@ export const MatchSetupScreen: React.FC<Props> = ({ navigation }) => {
   const [teamB, setTeamB] = useState('Team B')
   const [overs, setOvers] = useState('6')
   const [playersPerTeam, setPlayersPerTeam] = useState('7')
+  const [minBatsmen, setMinBatsmen] = useState('1')
 
   const setupMatch = useMatchStore(state => state.setupMatch)
 
   const handleStartMatch = () => {
     const oversNum = parseInt(overs, 10)
     const playersNum = parseInt(playersPerTeam, 10)
+    const minBatsmenNum = parseInt(minBatsmen, 10)
 
     if (isNaN(oversNum) || oversNum <= 0) {
       Alert.alert('Invalid Overs', 'Overs must be a number greater than 0')
@@ -37,11 +39,17 @@ export const MatchSetupScreen: React.FC<Props> = ({ navigation }) => {
       return
     }
 
+    if (isNaN(minBatsmenNum) || (minBatsmenNum !== 1 && minBatsmenNum !== 2)) {
+      Alert.alert('Invalid Min Batsmen', 'Min Batsmen must be 1 or 2')
+      return
+    }
+
     setupMatch({
       teamA,
       teamB,
       overs: oversNum,
       playersPerTeam: playersNum,
+      minBatsmen: minBatsmenNum,
     })
 
     navigation.replace('Scoring')
@@ -79,6 +87,12 @@ export const MatchSetupScreen: React.FC<Props> = ({ navigation }) => {
           label="Players per Team"
           value={playersPerTeam}
           onSave={setPlayersPerTeam}
+          keyboardType="number-pad"
+        />
+        <EditableField
+          label="Min Batsmen at Crease"
+          value={minBatsmen}
+          onSave={setMinBatsmen}
           keyboardType="number-pad"
         />
       </ScrollView>

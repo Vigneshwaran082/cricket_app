@@ -15,4 +15,5 @@ export type MatchSetupParams = {
   teamB: string
   overs: number
   playersPerTeam: number
+  minBatsmen: number
 }

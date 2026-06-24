@@ -9,6 +9,7 @@ type MatchState = {
   teamB: string
   overs: number
   playersPerTeam: number
+  minBatsmen: number
   innings: [Innings, Innings]
   currentInnings: 0 | 1
   currentBallIndex: number
@@ -55,13 +56,17 @@ const getNextPhase = (
   firstInningsBalls: BallEntry[],
   currentInnings: 0 | 1,
   playersPerTeam: number,
+  minBatsmen: number,
   totalBalls: number
 ): Phase | null => {
   const wickets = computeWickets(updatedBalls, newBallIndex)
   const runs = computeRuns(updatedBalls, newBallIndex)
 
-  // All out — check first (highest priority)
-  if (wickets >= playersPerTeam - 1) {
+  // All out threshold depends on minBatsmen.
+  // If minBatsmen = 1, threshold = playersPerTeam (last man bats alone)
+  // If minBatsmen = 2, threshold = playersPerTeam - 1 (standard)
+  const allOutThreshold = playersPerTeam - (minBatsmen - 1)
+  if (wickets >= allOutThreshold) {
     return currentInnings === 0 ? 'inningsOver' : 'result'
   }
 
@@ -88,6 +93,7 @@ export const useMatchStore = create<MatchState>()(
       teamB: 'Team B',
       overs: 6,
       playersPerTeam: 7,
+      minBatsmen: 1,
       innings: [createEmptyInnings(36), createEmptyInnings(36)],
       currentInnings: 0,
       currentBallIndex: 0,
@@ -100,12 +106,14 @@ export const useMatchStore = create<MatchState>()(
           teamB: params.teamB,
           overs: params.overs,
           playersPerTeam: params.playersPerTeam,
-          innings: [createEmptyInnings(totalBalls), createEmptyInnings(totalBalls)],
-          currentInnings: 0,
-          currentBallIndex: 0,
-          phase: 'scoring',
-        })
-      },
+                minBatsmen: params.minBatsmen,
+                innings: [createEmptyInnings(totalBalls), createEmptyInnings(totalBalls)],
+                currentInnings: 0,
+                currentBallIndex: 0,
+                phase: 'scoring',
+              })
+            },
+
 
       setBallRuns: (index: number, runs: number) => {
         set(state => {
@@ -128,6 +136,7 @@ export const useMatchStore = create<MatchState>()(
             newInnings[0].balls,
             cur,
             state.playersPerTeam,
+            state.minBatsmen,
             state.overs * 6
           )
 
@@ -160,6 +169,7 @@ export const useMatchStore = create<MatchState>()(
             newInnings[0].balls,
             cur,
             state.playersPerTeam,
+            state.minBatsmen,
             state.overs * 6
           )
 
@@ -183,6 +193,7 @@ export const useMatchStore = create<MatchState>()(
             state.innings[0].balls,
             cur,
             state.playersPerTeam,
+            state.minBatsmen,
             state.overs * 6
           )
 
@@ -229,12 +240,14 @@ export const useMatchStore = create<MatchState>()(
           teamB: 'Team B',
           overs: 6,
           playersPerTeam: 7,
+          minBatsmen: 1,
           innings: [createEmptyInnings(36), createEmptyInnings(36)],
           currentInnings: 0,
           currentBallIndex: 0,
           phase: 'setup',
         })
       },
+
 
       // Selectors — compute from balls[0..cursor-1] only
       totalRuns: () => {
@@ -265,8 +278,9 @@ export const useMatchStore = create<MatchState>()(
 
       batsmenRemaining: () => {
         const state = get()
-        return state.playersPerTeam - 1 - state.totalWickets()
+        return state.playersPerTeam - (state.minBatsmen - 1) - state.totalWickets()
       },
+
 
       target: () => {
         const state = get()
