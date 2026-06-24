@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "Gully Cricket",
-    "slug": "GullyCricket",
+    "slug": "cricketapp",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -14,7 +14,7 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.vigneshwaran082.gullycricket",
+      "bundleIdentifier": "com.vigneshwaran082.cricketapp",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
       }
@@ -26,7 +26,7 @@
       },
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
-      "package": "com.vigneshwaran082.gullycricket"
+      "package": "com.vigneshwaran082.cricketapp"
     },
     "web": {
       "favicon": "./assets/favicon.png"
