@@ -133,11 +133,20 @@ describe('auto innings end', () => {
     expect(store().phase).toBe('inningsOver')
   })
 
-  test('9. phase becomes inningsOver when all out (wickets === playersPerTeam - 1)', () => {
+  test('9. phase becomes inningsOver when all out (default minBatsmen=1 => innings ends at 3 wickets for 3 players)', () => {
     store().setupMatch({ teamA: 'A', teamB: 'B', overs: 5, playersPerTeam: 3 })
-    // 2 wickets = 3 - 1 = all out
+    // With default minBatsmen=1, innings ends at 3 wickets
     store().toggleWicket(0) // wicket on ball 0, cursor → 1
     store().toggleWicket(1) // wicket on ball 1, cursor → 2
+    store().toggleWicket(2) // wicket on ball 2, cursor → 3
+    expect(store().phase).toBe('inningsOver')
+  })
+
+  test('9b. phase becomes inningsOver when minBatsmen=2 (standard rule: innings ends at playersPerTeam - 1 wickets)', () => {
+    store().setupMatch({ teamA: 'A', teamB: 'B', overs: 5, playersPerTeam: 3, minBatsmen: 2 })
+    // minBatsmen=2 -> innings ends at 2 wickets for 3 players
+    store().toggleWicket(0)
+    store().toggleWicket(1)
     expect(store().phase).toBe('inningsOver')
   })
 })

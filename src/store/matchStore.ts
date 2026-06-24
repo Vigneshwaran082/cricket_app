@@ -106,7 +106,7 @@ export const useMatchStore = create<MatchState>()(
           teamB: params.teamB,
           overs: params.overs,
           playersPerTeam: params.playersPerTeam,
-                minBatsmen: params.minBatsmen,
+                minBatsmen: params.minBatsmen ?? 1,
                 innings: [createEmptyInnings(totalBalls), createEmptyInnings(totalBalls)],
                 currentInnings: 0,
                 currentBallIndex: 0,
