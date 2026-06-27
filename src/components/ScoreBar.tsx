@@ -5,30 +5,61 @@ import { useMatchStore } from '../store/matchStore'
 
 interface ScoreBarProps {
   onHomePress?: () => void
+  displayInnings?: 0 | 1
+  displayCursor?: number
 }
 
-export const ScoreBar: React.FC<ScoreBarProps> = ({ onHomePress }) => {
+export const ScoreBar: React.FC<ScoreBarProps> = ({ onHomePress, displayInnings, displayCursor }) => {
   const teamA = useMatchStore(state => state.teamA)
   const teamB = useMatchStore(state => state.teamB)
+  const innings = useMatchStore(state => state.innings)
   const currentInnings = useMatchStore(state => state.currentInnings)
   const currentBallIndex = useMatchStore(state => state.currentBallIndex)
   const overs = useMatchStore(state => state.overs)
   const playersPerTeam = useMatchStore(state => state.playersPerTeam)
+  const minBatsmen = useMatchStore(state => state.minBatsmen)
+  const totalRunsFromStore = useMatchStore(state => state.totalRuns?.() ?? 0)
+  const totalWicketsFromStore = useMatchStore(state => state.totalWickets?.() ?? 0)
+  const oversBowledFromStore = useMatchStore(state => state.oversBowled?.() ?? '0.0')
+  const ballsRemainingFromStore = useMatchStore(state => state.ballsRemaining?.() ?? overs * 6)
+  const batsmenRemainingFromStore = useMatchStore(state => state.batsmenRemaining?.() ?? playersPerTeam - 1)
+  const targetFromStore = useMatchStore(state => state.target?.() ?? 0)
 
-  const totalRuns = useMatchStore(state => state.totalRuns())
-  const totalWickets = useMatchStore(state => state.totalWickets())
-  const oversBowled = useMatchStore(state => state.oversBowled())
-  const ballsRemaining = useMatchStore(state => state.ballsRemaining())
-  const batsmenRemaining = useMatchStore(state => state.batsmenRemaining())
-  const target = useMatchStore(state => state.target())
+  const hasDisplayOverride = displayInnings !== undefined || displayCursor !== undefined
+  const canComputeFromInnings =
+    Array.isArray(innings) &&
+    innings.length >= 2 &&
+    !!innings[0]?.balls &&
+    !!innings[1]?.balls
+  const inningsToDisplay: 0 | 1 = displayInnings ?? currentInnings
+  const cursorToDisplay = displayCursor ?? currentBallIndex
 
-  const currentTeam = currentInnings === 0 ? teamA : teamB
-  const currentOverNumber = Math.floor(currentBallIndex / 6) + 1
+  let totalRuns = totalRunsFromStore
+  let totalWickets = totalWicketsFromStore
+  let oversBowled = oversBowledFromStore
+  let ballsRemaining = ballsRemainingFromStore
+  let batsmenRemaining = batsmenRemainingFromStore
+  let target = targetFromStore
+
+  if (hasDisplayOverride && canComputeFromInnings) {
+    const balls = innings[inningsToDisplay].balls
+    totalRuns = balls.slice(0, cursorToDisplay).reduce((sum, b) => sum + b.runs, 0)
+    totalWickets = balls.slice(0, cursorToDisplay).filter(b => b.isWicket).length
+    oversBowled = `${Math.floor(cursorToDisplay / 6)}.${cursorToDisplay % 6}`
+    ballsRemaining = overs * 6 - cursorToDisplay
+    batsmenRemaining = playersPerTeam - ((minBatsmen ?? 1) - 1) - totalWickets
+    target = inningsToDisplay === 0
+      ? 0
+      : innings[0].balls.reduce((sum, b) => sum + b.runs, 0) + 1
+  }
+
+  const currentTeam = inningsToDisplay === 0 ? teamA : teamB
+  const currentOverNumber = Math.floor(cursorToDisplay / 6) + 1
 
   const needRuns = target - totalRuns
   const ballsRemainingInChase = ballsRemaining
 
-  const isChaseInning = currentInnings === 1
+  const isChaseInning = inningsToDisplay === 1
 
   return (
     <View style={styles.container}>

@@ -8,7 +8,11 @@ import { useMatchStore } from '../store/matchStore'
 
 type RootStackParamList = {
   Setup: undefined
-  Scoring: undefined
+  Scoring: {
+    readOnly: true
+    viewInnings: 0 | 1
+    returnTo: 'InningsOver' | 'Result'
+  } | undefined
   InningsOver: undefined
   Result: undefined
 }
@@ -150,4 +154,3 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
 })
-

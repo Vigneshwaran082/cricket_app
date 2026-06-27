@@ -14,11 +14,14 @@ import { ScoreBar } from '../components/ScoreBar'
 import { BallCell } from '../components/BallCell'
 import { NumberPad } from '../components/NumberPad'
 import { useMatchStore } from '../store/matchStore'
-import type { BallEntry } from '../types'
 
 type RootStackParamList = {
   Setup: undefined
-  Scoring: undefined
+  Scoring: {
+    readOnly: true
+    viewInnings: 0 | 1
+    returnTo: 'InningsOver' | 'Result'
+  } | undefined
   InningsOver: undefined
   Result: undefined
 }
@@ -27,7 +30,7 @@ type Props = NativeStackScreenProps<RootStackParamList, 'Scoring'>
 
 const OVER_ROW_HEIGHT = 80 // approximate height of each over row
 
-export const ScoringScreen: React.FC<Props> = ({ navigation }) => {
+export const ScoringScreen: React.FC<Props> = ({ navigation, route }) => {
   const [numberPadVisible, setNumberPadVisible] = useState(false)
   const [selectedBallIndex, setSelectedBallIndex] = useState(0)
   const scrollViewRef = useRef<ScrollView>(null)
@@ -44,27 +47,36 @@ export const ScoringScreen: React.FC<Props> = ({ navigation }) => {
   const undoLastBall = useMatchStore(state => state.undoLastBall)
   const newMatch = useMatchStore(state => state.newMatch)
 
-  const balls = innings[currentInnings].balls
+  const isReadOnly = route.params?.readOnly === true
+  const viewInnings = route.params?.viewInnings
+  const returnTo = route.params?.returnTo
+
+  const displayInnings: 0 | 1 = isReadOnly ? (viewInnings ?? currentInnings) : currentInnings
+  const balls = innings[displayInnings].balls
+  const displayBallIndex = isReadOnly ? balls.length : currentBallIndex
 
   // Watch for phase changes to navigate away
   useEffect(() => {
+    if (isReadOnly) return
     if (phase === 'inningsOver') {
       navigation.replace('InningsOver')
     } else if (phase === 'result') {
       navigation.replace('Result')
     }
-  }, [phase, navigation])
+  }, [phase, navigation, isReadOnly])
 
   // Auto-scroll to keep current ball over visible
   useEffect(() => {
+    if (isReadOnly) return
     if (scrollViewRef.current) {
       const overIndex = Math.floor(currentBallIndex / 6)
       const scrollY = overIndex * OVER_ROW_HEIGHT
       scrollViewRef.current.scrollTo({ y: scrollY, animated: true })
     }
-  }, [currentBallIndex])
+  }, [currentBallIndex, isReadOnly])
 
   const handleBallTap = (index: number) => {
+    if (isReadOnly) return
     // Guard: only open NumberPad for current or already-bowled balls
     if (index > currentBallIndex) return
     setSelectedBallIndex(index)
@@ -72,6 +84,7 @@ export const ScoringScreen: React.FC<Props> = ({ navigation }) => {
   }
 
   const handleBallDoubleTap = (index: number) => {
+    if (isReadOnly) return
     // Guard: only toggle wicket for current or already-bowled balls
     if (index > currentBallIndex) return
     toggleWicket(index)
@@ -119,7 +132,28 @@ export const ScoringScreen: React.FC<Props> = ({ navigation }) => {
   return (
     <SafeAreaView style={styles.container}>
       {/* Fixed ScoreBar at top */}
-      <ScoreBar onHomePress={handleHomePress} />
+      <ScoreBar
+        onHomePress={isReadOnly ? undefined : handleHomePress}
+        displayInnings={displayInnings}
+        displayCursor={displayBallIndex}
+      />
+
+      {isReadOnly && (
+        <View style={styles.readOnlyHeader}>
+          <Pressable
+            style={({ pressed }) => [styles.backButton, pressed && styles.pressed]}
+            onPress={() => {
+              if (returnTo) {
+                navigation.replace(returnTo)
+                return
+              }
+              navigation.goBack()
+            }}
+          >
+            <Text style={styles.backButtonText}>← Back</Text>
+          </Pressable>
+        </View>
+      )}
 
       {/* Ball grid grouped by overs */}
       <ScrollView
@@ -148,8 +182,8 @@ export const ScoringScreen: React.FC<Props> = ({ navigation }) => {
                         ball={ball}
                         index={globalIndex}
                         ballNumberInOver={ballInOverIndex + 1}
-                        isBowled={globalIndex < currentBallIndex}
-                        isCurrent={globalIndex === currentBallIndex}
+                        isBowled={isReadOnly || globalIndex < displayBallIndex}
+                        isCurrent={!isReadOnly && globalIndex === displayBallIndex}
                         onTap={() => handleBallTap(globalIndex)}
                         onDoubleTap={() => handleBallDoubleTap(globalIndex)}
                       />
@@ -170,40 +204,42 @@ export const ScoringScreen: React.FC<Props> = ({ navigation }) => {
         })}
       </ScrollView>
 
-      {/* Action buttons */}
-      <View style={styles.buttonContainer}>
-        <Pressable
-          style={({ pressed }) => [
-            styles.nextBallButton,
-            pressed && styles.pressed,
-          ]}
-          onPress={confirmDotBall}
-        >
-          <Text style={styles.nextBallText}>Next Ball (Dot) →</Text>
-        </Pressable>
+      {!isReadOnly && (
+        <View style={styles.buttonContainer}>
+          <Pressable
+            style={({ pressed }) => [
+              styles.nextBallButton,
+              pressed && styles.pressed,
+            ]}
+            onPress={confirmDotBall}
+          >
+            <Text style={styles.nextBallText}>Next Ball (Dot) →</Text>
+          </Pressable>
 
-        <Pressable
-          style={({ pressed }) => [
-            styles.undoButton,
-            isUndoDisabled && styles.undoDisabled,
-            pressed && !isUndoDisabled && styles.pressed,
-          ]}
-          onPress={undoLastBall}
-          disabled={isUndoDisabled}
-        >
-          <Text style={[styles.undoText, isUndoDisabled && styles.undoTextDisabled]}>
-            ↶ Undo
-          </Text>
-        </Pressable>
-      </View>
+          <Pressable
+            style={({ pressed }) => [
+              styles.undoButton,
+              isUndoDisabled && styles.undoDisabled,
+              pressed && !isUndoDisabled && styles.pressed,
+            ]}
+            onPress={undoLastBall}
+            disabled={isUndoDisabled}
+          >
+            <Text style={[styles.undoText, isUndoDisabled && styles.undoTextDisabled]}>
+              ↶ Undo
+            </Text>
+          </Pressable>
+        </View>
+      )}
 
-      {/* NumberPad modal */}
-      <NumberPad
-        visible={numberPadVisible}
-        onSelect={handleNumberPadSelect}
-        onWicket={handleNumberPadWicket}
-        onClose={() => setNumberPadVisible(false)}
-      />
+      {!isReadOnly && (
+        <NumberPad
+          visible={numberPadVisible}
+          onSelect={handleNumberPadSelect}
+          onWicket={handleNumberPadWicket}
+          onClose={() => setNumberPadVisible(false)}
+        />
+      )}
     </SafeAreaView>
   )
 }
@@ -219,6 +255,25 @@ const styles = StyleSheet.create({
   gridContent: {
     paddingVertical: 12,
     paddingHorizontal: 12,
+  },
+  readOnlyHeader: {
+    paddingHorizontal: 12,
+    paddingTop: 8,
+  },
+  backButton: {
+    alignSelf: 'flex-start',
+    minHeight: 44,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderRadius: RADIUS,
+    backgroundColor: COLORS.card,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  backButtonText: {
+    color: COLORS.text,
+    fontSize: 15,
+    fontWeight: '600',
   },
   overRow: {
     flexDirection: 'row',

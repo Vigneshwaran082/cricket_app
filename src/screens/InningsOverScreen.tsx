@@ -7,7 +7,11 @@ import { useMatchStore } from '../store/matchStore'
 
 type RootStackParamList = {
   Setup: undefined
-  Scoring: undefined
+  Scoring: {
+    readOnly: true
+    viewInnings: 0 | 1
+    returnTo: 'InningsOver' | 'Result'
+  } | undefined
   InningsOver: undefined
   Result: undefined
 }
@@ -47,6 +51,19 @@ export const InningsOverScreen: React.FC<Props> = ({ navigation }) => {
           <Text style={styles.targetText}>
             {teamB} needs {target} to win
           </Text>
+
+          <Pressable
+            style={({ pressed }) => [styles.viewButton, pressed && styles.buttonPressed]}
+            onPress={() =>
+              navigation.navigate('Scoring', {
+                readOnly: true,
+                viewInnings: 0,
+                returnTo: 'InningsOver',
+              })
+            }
+          >
+            <Text style={styles.viewButtonText}>📊 View 1st Innings</Text>
+          </Pressable>
         </View>
 
         <Pressable
@@ -98,6 +115,22 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: COLORS.textLight,
     textAlign: 'center',
+  },
+  viewButton: {
+    marginTop: 16,
+    backgroundColor: COLORS.card,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    borderRadius: RADIUS,
+    minHeight: 48,
+    paddingHorizontal: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  viewButtonText: {
+    color: COLORS.text,
+    fontSize: 15,
+    fontWeight: '600',
   },
   button: {
     backgroundColor: COLORS.primary,
