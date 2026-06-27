@@ -14,6 +14,7 @@ import { ScoreBar } from '../components/ScoreBar'
 import { BallCell } from '../components/BallCell'
 import { NumberPad } from '../components/NumberPad'
 import { useMatchStore } from '../store/matchStore'
+import type { BallEntry } from '../types'
 
 type RootStackParamList = {
   Setup: undefined
@@ -24,7 +25,7 @@ type RootStackParamList = {
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Scoring'>
 
-const CELL_SIZE = 60 // 52px cell + 4px margin on each side
+const OVER_ROW_HEIGHT = 80 // approximate height of each over row
 
 export const ScoringScreen: React.FC<Props> = ({ navigation }) => {
   const [numberPadVisible, setNumberPadVisible] = useState(false)
@@ -34,6 +35,7 @@ export const ScoringScreen: React.FC<Props> = ({ navigation }) => {
   const innings = useMatchStore(state => state.innings)
   const currentInnings = useMatchStore(state => state.currentInnings)
   const currentBallIndex = useMatchStore(state => state.currentBallIndex)
+  const overs = useMatchStore(state => state.overs)
   const phase = useMatchStore(state => state.phase)
 
   const setBallRuns = useMatchStore(state => state.setBallRuns)
@@ -53,11 +55,11 @@ export const ScoringScreen: React.FC<Props> = ({ navigation }) => {
     }
   }, [phase, navigation])
 
-  // Auto-scroll to keep current ball row visible
+  // Auto-scroll to keep current ball over visible
   useEffect(() => {
     if (scrollViewRef.current) {
-      const row = Math.floor(currentBallIndex / 6)
-      const scrollY = row * CELL_SIZE
+      const overIndex = Math.floor(currentBallIndex / 6)
+      const scrollY = overIndex * OVER_ROW_HEIGHT
       scrollViewRef.current.scrollTo({ y: scrollY, animated: true })
     }
   }, [currentBallIndex])
@@ -81,6 +83,13 @@ export const ScoringScreen: React.FC<Props> = ({ navigation }) => {
 
   const handleNumberPadWicket = () => {
     toggleWicket(selectedBallIndex)
+  }
+
+  // Compute total runs for a specific over (balls 0-5, 6-11, etc.)
+  const getOverTotal = (overIndex: number): number => {
+    const startIdx = overIndex * 6
+    const endIdx = startIdx + 6
+    return balls.slice(startIdx, endIdx).reduce((sum, ball) => sum + ball.runs, 0)
   }
 
   const isUndoDisabled = currentBallIndex === 0
@@ -112,25 +121,53 @@ export const ScoringScreen: React.FC<Props> = ({ navigation }) => {
       {/* Fixed ScoreBar at top */}
       <ScoreBar onHomePress={handleHomePress} />
 
-      {/* Ball grid */}
+      {/* Ball grid grouped by overs */}
       <ScrollView
         ref={scrollViewRef}
         style={styles.gridContainer}
         contentContainerStyle={styles.gridContent}
       >
-        <View style={styles.grid}>
-          {balls.map((ball, index) => (
-            <BallCell
-              key={index}
-              ball={ball}
-              index={index}
-              isBowled={index < currentBallIndex}
-              isCurrent={index === currentBallIndex}
-              onTap={() => handleBallTap(index)}
-              onDoubleTap={() => handleBallDoubleTap(index)}
-            />
-          ))}
-        </View>
+        {Array.from({ length: overs }).map((_, overIndex) => {
+          const startIdx = overIndex * 6
+          const overBalls = balls.slice(startIdx, startIdx + 6)
+          const overTotal = getOverTotal(overIndex)
+
+          return (
+            <View key={overIndex}>
+              {/* Over header */}
+              <Text style={styles.overHeader}>Over {overIndex + 1}</Text>
+
+              <View style={styles.overRow}>
+                {/* 6 balls */}
+                <View style={styles.ballsInOver}>
+                  {overBalls.map((ball, ballInOverIndex) => {
+                    const globalIndex = startIdx + ballInOverIndex
+                    return (
+                      <BallCell
+                        key={globalIndex}
+                        ball={ball}
+                        index={globalIndex}
+                        ballNumberInOver={ballInOverIndex + 1}
+                        isBowled={globalIndex < currentBallIndex}
+                        isCurrent={globalIndex === currentBallIndex}
+                        onTap={() => handleBallTap(globalIndex)}
+                        onDoubleTap={() => handleBallDoubleTap(globalIndex)}
+                      />
+                    )
+                  })}
+                </View>
+
+                {/* Over total */}
+                <View style={styles.overTotal}>
+                  <Text style={styles.overTotalText}>{overTotal}</Text>
+                </View>
+              </View>
+
+              {/* Separator line */}
+              {overIndex < overs - 1 && <View style={styles.separator} />}
+            </View>
+          )
+        })}
       </ScrollView>
 
       {/* Action buttons */}
@@ -181,12 +218,44 @@ const styles = StyleSheet.create({
   },
   gridContent: {
     paddingVertical: 12,
-    paddingHorizontal: 4,
+    paddingHorizontal: 12,
   },
-  grid: {
+  overRow: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
+    alignItems: 'center',
+    gap: 8,
+    paddingVertical: 8,
+  },
+  overHeader: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: COLORS.textLight,
+    marginTop: 12,
+    marginBottom: 6,
+  },
+  ballsInOver: {
+    flex: 1,
+    flexDirection: 'row',
+    gap: 4,
     justifyContent: 'flex-start',
+  },
+  overTotal: {
+    width: 50,
+    height: 48,
+    borderRadius: RADIUS,
+    backgroundColor: COLORS.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  overTotalText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: COLORS.textLight,
+  },
+  separator: {
+    height: 1,
+    backgroundColor: COLORS.border,
+    marginVertical: 4,
   },
   buttonContainer: {
     paddingHorizontal: 12,

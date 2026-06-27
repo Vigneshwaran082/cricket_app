@@ -6,18 +6,20 @@ import type { BallEntry } from '../types'
 type Props = {
   ball: BallEntry
   index: number
+  ballNumberInOver: number
   isBowled: boolean
   isCurrent: boolean
   onTap: () => void
   onDoubleTap: () => void
 }
 
-const SIZE = 52
+const SIZE = 48
 const RADIUS = SIZE / 2
 
 export const BallCell: React.FC<Props> = ({
   ball,
   index,
+  ballNumberInOver,
   isBowled,
   isCurrent,
   onTap,
@@ -50,7 +52,7 @@ export const BallCell: React.FC<Props> = ({
       return {
         bg: '#e0e0e0',
         textColor: '#aaaaaa',
-        label: String(index + 1),
+        label: String(ballNumberInOver),
         bordered: false,
         borderColor: 'transparent',
       }
@@ -60,7 +62,7 @@ export const BallCell: React.FC<Props> = ({
       return {
         bg: '#ffffff',
         textColor: COLORS.primary,
-        label: String(index + 1),
+        label: String(ballNumberInOver),
         bordered: true,
         borderColor: COLORS.primary,
       }

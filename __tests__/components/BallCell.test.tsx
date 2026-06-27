@@ -6,6 +6,7 @@ jest.useFakeTimers()
 
 const defaultProps = {
   index: 0,
+  ballNumberInOver: 1,
   isBowled: false,
   isCurrent: false,
   onTap: jest.fn(),
@@ -54,12 +55,13 @@ describe('BallCell', () => {
     expect(screen.getByText('W')).toBeTruthy()
   })
 
-  test('17. shows ball number (index+1) for current ball', () => {
+  test('17. shows ball number within over (ballNumberInOver) for current ball', () => {
     render(
       <BallCell
         {...defaultProps}
         ball={{ runs: 0, isWicket: false }}
         index={4}
+        ballNumberInOver={5}
         isCurrent
       />
     )
