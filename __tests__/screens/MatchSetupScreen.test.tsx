@@ -60,4 +60,24 @@ describe('MatchSetupScreen', () => {
     expect(useMatchStore.getState().phase).toBe('scoring')
     expect(mockNavigation.replace).toHaveBeenCalledWith('Scoring')
   })
+
+  test('Voice Announcement toggle defaults to OFF and is passed to setupMatch', () => {
+    render(<MatchSetupScreen navigation={mockNavigation as any} route={{} as any} />)
+    const toggle = screen.getByRole('switch')
+    expect(toggle.props.value).toBe(false)
+
+    fireEvent.press(screen.getByText('Start Match →'))
+    expect(useMatchStore.getState().voiceAnnouncement).toBe(false)
+  })
+
+  test('enabling the Voice Announcement toggle turns the setting ON after match start', () => {
+    render(<MatchSetupScreen navigation={mockNavigation as any} route={{} as any} />)
+    const toggle = screen.getByRole('switch')
+
+    fireEvent(toggle, 'valueChange', true)
+    expect(toggle.props.value).toBe(true)
+
+    fireEvent.press(screen.getByText('Start Match →'))
+    expect(useMatchStore.getState().voiceAnnouncement).toBe(true)
+  })
 })

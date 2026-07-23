@@ -2,6 +2,7 @@ import { create } from 'zustand'
 import { persist, createJSONStorage } from 'zustand/middleware'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import type { BallEntry, Innings, Phase, MatchSetupParams } from '../types'
+import { announceBall } from '../utils/voiceAnnouncer'
 
 type MatchState = {
   // State
@@ -10,6 +11,7 @@ type MatchState = {
   overs: number
   playersPerTeam: number
   minBatsmen: number
+  voiceAnnouncement: boolean
   innings: [Innings, Innings]
   currentInnings: 0 | 1
   currentBallIndex: number
@@ -23,6 +25,7 @@ type MatchState = {
   undoLastBall: () => void
   advanceInnings: () => void
   newMatch: () => void
+  setVoiceAnnouncement: (enabled: boolean) => void
 
   // Selectors
   totalRuns: () => number
@@ -94,6 +97,7 @@ export const useMatchStore = create<MatchState>()(
       overs: 6,
       playersPerTeam: 7,
       minBatsmen: 1,
+      voiceAnnouncement: false,
       innings: [createEmptyInnings(36), createEmptyInnings(36)],
       currentInnings: 0,
       currentBallIndex: 0,
@@ -107,6 +111,7 @@ export const useMatchStore = create<MatchState>()(
           overs: params.overs,
           playersPerTeam: params.playersPerTeam,
                 minBatsmen: params.minBatsmen ?? 1,
+                voiceAnnouncement: params.voiceAnnouncement ?? false,
                 innings: [createEmptyInnings(totalBalls), createEmptyInnings(totalBalls)],
                 currentInnings: 0,
                 currentBallIndex: 0,
@@ -139,6 +144,10 @@ export const useMatchStore = create<MatchState>()(
             state.minBatsmen,
             state.overs * 6
           )
+
+          if (state.voiceAnnouncement) {
+            announceBall(index, newBalls[index].runs, newBalls[index].isWicket)
+          }
 
           return {
             innings: newInnings,
@@ -173,6 +182,10 @@ export const useMatchStore = create<MatchState>()(
             state.overs * 6
           )
 
+          if (state.voiceAnnouncement) {
+            announceBall(index, newBalls[index].runs, newBalls[index].isWicket)
+          }
+
           return {
             innings: newInnings,
             currentBallIndex: newBallIndex,
@@ -184,6 +197,7 @@ export const useMatchStore = create<MatchState>()(
       confirmDotBall: () => {
         set(state => {
           const cur = state.currentInnings
+          const ballIndex = state.currentBallIndex
           const newBallIndex = state.currentBallIndex + 1
           const currentBalls = state.innings[cur].balls
 
@@ -196,6 +210,10 @@ export const useMatchStore = create<MatchState>()(
             state.minBatsmen,
             state.overs * 6
           )
+
+          if (state.voiceAnnouncement) {
+            announceBall(ballIndex, 0, false)
+          }
 
           return {
             currentBallIndex: newBallIndex,
@@ -234,6 +252,10 @@ export const useMatchStore = create<MatchState>()(
         })
       },
 
+      setVoiceAnnouncement: (enabled: boolean) => {
+        set({ voiceAnnouncement: enabled })
+      },
+
       newMatch: () => {
         set({
           teamA: 'Team A',
@@ -241,6 +263,7 @@ export const useMatchStore = create<MatchState>()(
           overs: 6,
           playersPerTeam: 7,
           minBatsmen: 1,
+          voiceAnnouncement: false,
           innings: [createEmptyInnings(36), createEmptyInnings(36)],
           currentInnings: 0,
           currentBallIndex: 0,

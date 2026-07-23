@@ -16,4 +16,5 @@ export type MatchSetupParams = {
   overs: number
   playersPerTeam: number
   minBatsmen: number
+  voiceAnnouncement?: boolean
 }

@@ -1,3 +1,4 @@
+import * as Speech from 'expo-speech'
 import { useMatchStore } from '../../src/store/matchStore'
 
 jest.mock('@react-native-async-storage/async-storage', () => ({
@@ -7,12 +8,20 @@ jest.mock('@react-native-async-storage/async-storage', () => ({
   clear: jest.fn().mockResolvedValue(null),
 }))
 
+jest.mock('expo-speech', () => ({
+  speak: jest.fn(),
+  stop: jest.fn(),
+}))
+
+const mockSpeak = Speech.speak as jest.Mock
+
 const DEFAULT_PARAMS = { teamA: 'India', teamB: 'Australia', overs: 3, playersPerTeam: 7 }
 
 const store = () => useMatchStore.getState()
 
 beforeEach(() => {
   store().newMatch()
+  mockSpeak.mockClear()
 })
 
 // ─── setupMatch ────────────────────────────────────────────────────────────
@@ -250,5 +259,123 @@ describe('derived selectors', () => {
     for (let i = 4; i < 18; i++) store().confirmDotBall()
     store().advanceInnings()
     expect(store().target()).toBe(21)
+  })
+})
+
+// ─── Voice announcements ───────────────────────────────────────────────────
+
+describe('voice announcements', () => {
+  beforeEach(() => {
+    store().setupMatch({ ...DEFAULT_PARAMS, voiceAnnouncement: true })
+  })
+
+  test('setBallRuns speaks the recorded run count for the current ball', () => {
+    store().setBallRuns(0, 4)
+    expect(mockSpeak).toHaveBeenCalledWith(
+      'Over 1, Ball 1, Four!',
+      { language: 'en-IN', rate: 0.9 }
+    )
+  })
+
+  test('setBallRuns speaks using the ball index, not the advanced cursor', () => {
+    store().setBallRuns(0, 1) // cursor→1
+    store().setBallRuns(1, 2) // ball index 1 -> Over 1, Ball 2
+    expect(mockSpeak).toHaveBeenLastCalledWith(
+      'Over 1, Ball 2, 2 runs',
+      { language: 'en-IN', rate: 0.9 }
+    )
+  })
+
+  test('confirmDotBall speaks "No run"', () => {
+    store().confirmDotBall()
+    expect(mockSpeak).toHaveBeenCalledWith(
+      'Over 1, Ball 1, No run',
+      { language: 'en-IN', rate: 0.9 }
+    )
+  })
+
+  test('toggleWicket speaks "Wicket!" when marking a wicket', () => {
+    store().toggleWicket(0)
+    expect(mockSpeak).toHaveBeenCalledWith(
+      'Over 1, Ball 1, Wicket!',
+      { language: 'en-IN', rate: 0.9 }
+    )
+  })
+
+  test('toggleWicket off announces the underlying run value again', () => {
+    store().toggleWicket(0) // mark wicket, cursor→1
+    mockSpeak.mockClear()
+    store().toggleWicket(0) // unmark wicket on a past ball
+    expect(mockSpeak).toHaveBeenCalledWith(
+      'Over 1, Ball 1, No run',
+      { language: 'en-IN', rate: 0.9 }
+    )
+  })
+
+  test('announces correct over number after crossing into a new over', () => {
+    for (let i = 0; i < 6; i++) store().confirmDotBall() // fills over 1, cursor→6
+    mockSpeak.mockClear()
+    store().setBallRuns(6, 6)
+    expect(mockSpeak).toHaveBeenCalledWith(
+      'Over 2, Ball 1, Six!',
+      { language: 'en-IN', rate: 0.9 }
+    )
+  })
+
+  test('speaks exactly once per ball action', () => {
+    store().setBallRuns(0, 2)
+    expect(mockSpeak).toHaveBeenCalledTimes(1)
+  })
+})
+
+// ─── voiceAnnouncement setting ─────────────────────────────────────────────
+
+describe('voiceAnnouncement setting', () => {
+  test('defaults to OFF after newMatch', () => {
+    expect(store().voiceAnnouncement).toBe(false)
+  })
+
+  test('defaults to OFF when setupMatch is called without the flag', () => {
+    store().setupMatch(DEFAULT_PARAMS)
+    expect(store().voiceAnnouncement).toBe(false)
+  })
+
+  test('setupMatch stores voiceAnnouncement true when provided', () => {
+    store().setupMatch({ ...DEFAULT_PARAMS, voiceAnnouncement: true })
+    expect(store().voiceAnnouncement).toBe(true)
+  })
+
+  test('does not speak when voiceAnnouncement is OFF', () => {
+    store().setupMatch(DEFAULT_PARAMS) // OFF by default
+    store().setBallRuns(0, 4)
+    store().toggleWicket(1)
+    store().confirmDotBall()
+    expect(mockSpeak).not.toHaveBeenCalled()
+  })
+
+  test('speaks when voiceAnnouncement is ON', () => {
+    store().setupMatch({ ...DEFAULT_PARAMS, voiceAnnouncement: true })
+    store().setBallRuns(0, 4)
+    expect(mockSpeak).toHaveBeenCalledTimes(1)
+  })
+
+  test('setVoiceAnnouncement toggles the setting at runtime', () => {
+    store().setupMatch(DEFAULT_PARAMS)
+    store().setVoiceAnnouncement(true)
+    expect(store().voiceAnnouncement).toBe(true)
+    store().setBallRuns(0, 3)
+    expect(mockSpeak).toHaveBeenCalledTimes(1)
+
+    mockSpeak.mockClear()
+    store().setVoiceAnnouncement(false)
+    store().setBallRuns(1, 2)
+    expect(mockSpeak).not.toHaveBeenCalled()
+  })
+
+  test('newMatch resets voiceAnnouncement back to OFF', () => {
+    store().setupMatch({ ...DEFAULT_PARAMS, voiceAnnouncement: true })
+    expect(store().voiceAnnouncement).toBe(true)
+    store().newMatch()
+    expect(store().voiceAnnouncement).toBe(false)
   })
 })

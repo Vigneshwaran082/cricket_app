@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { View, Text, StyleSheet, TouchableOpacity, Alert, ScrollView } from 'react-native'
+import { View, Text, StyleSheet, TouchableOpacity, Alert, ScrollView, Switch } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import type { NativeStackScreenProps } from '@react-navigation/native-stack'
 import { COLORS, RADIUS, SHADOW } from '../theme'
@@ -25,6 +25,7 @@ export const MatchSetupScreen: React.FC<Props> = ({ navigation }) => {
   const [overs, setOvers] = useState('6')
   const [playersPerTeam, setPlayersPerTeam] = useState('7')
   const [minBatsmen, setMinBatsmen] = useState('1')
+  const [voiceAnnouncement, setVoiceAnnouncement] = useState(false)
 
   const setupMatch = useMatchStore(state => state.setupMatch)
 
@@ -54,6 +55,7 @@ export const MatchSetupScreen: React.FC<Props> = ({ navigation }) => {
       overs: oversNum,
       playersPerTeam: playersNum,
       minBatsmen: minBatsmenNum,
+      voiceAnnouncement,
     })
 
     navigation.replace('Scoring')
@@ -99,6 +101,14 @@ export const MatchSetupScreen: React.FC<Props> = ({ navigation }) => {
           onSave={setMinBatsmen}
           keyboardType="number-pad"
         />
+        <View style={styles.toggleRow}>
+          <Text style={styles.toggleLabel}>Voice Announcement</Text>
+          <Switch
+            value={voiceAnnouncement}
+            onValueChange={setVoiceAnnouncement}
+            trackColor={{ false: COLORS.border, true: COLORS.primary }}
+          />
+        </View>
       </ScrollView>
 
       {/* Start Match Button */}
@@ -136,6 +146,23 @@ const styles = StyleSheet.create({
   contentContainer: {
     paddingVertical: 16,
     paddingHorizontal: 16,
+  },
+  toggleRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: COLORS.card,
+    paddingVertical: 16,
+    paddingHorizontal: 16,
+    borderRadius: RADIUS,
+    minHeight: 44,
+    marginVertical: 8,
+    ...SHADOW,
+  },
+  toggleLabel: {
+    fontSize: 16,
+    color: COLORS.text,
+    fontWeight: '600',
   },
   button: {
     backgroundColor: COLORS.primary,
