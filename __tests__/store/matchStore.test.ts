@@ -379,3 +379,77 @@ describe('voiceAnnouncement setting', () => {
     expect(store().voiceAnnouncement).toBe(false)
   })
 })
+
+// ─── extendOvers ────────────────────────────────────────────────────────────
+
+describe('extendOvers', () => {
+  beforeEach(() => {
+    store().setupMatch(DEFAULT_PARAMS) // 3 overs = 18 balls
+  })
+
+  test('increases total overs by the given amount', () => {
+    store().extendOvers(2)
+    expect(store().overs).toBe(5)
+  })
+
+  test('extends both innings ball arrays to match the new over count', () => {
+    store().extendOvers(2)
+    expect(store().innings[0].balls.length).toBe(30)
+    expect(store().innings[1].balls.length).toBe(30)
+  })
+
+  test('new balls default to dot balls (runs 0, no wicket)', () => {
+    store().extendOvers(1)
+    const newBalls = store().innings[0].balls.slice(18)
+    expect(newBalls.every(b => b.runs === 0 && !b.isWicket)).toBe(true)
+  })
+
+  test('does not affect already-bowled balls or the cursor', () => {
+    store().setBallRuns(0, 4)
+    store().setBallRuns(1, 6)
+    store().extendOvers(2)
+    expect(store().innings[0].balls[0].runs).toBe(4)
+    expect(store().innings[0].balls[1].runs).toBe(6)
+    expect(store().currentBallIndex).toBe(2)
+  })
+
+  test('ignores zero as an invalid amount', () => {
+    store().extendOvers(0)
+    expect(store().overs).toBe(3)
+  })
+
+  test('ignores negative numbers as invalid', () => {
+    store().extendOvers(-2)
+    expect(store().overs).toBe(3)
+  })
+
+  test('reopens the match when phase was inningsOver', () => {
+    for (let i = 0; i < 18; i++) store().confirmDotBall()
+    expect(store().phase).toBe('inningsOver')
+    store().extendOvers(1)
+    expect(store().phase).toBe('scoring')
+  })
+
+  test('reopens the match when phase was result', () => {
+    for (let i = 0; i < 18; i++) store().confirmDotBall()
+    store().advanceInnings()
+    for (let i = 0; i < 18; i++) store().confirmDotBall()
+    expect(store().phase).toBe('result')
+    store().extendOvers(1)
+    expect(store().phase).toBe('scoring')
+  })
+
+  test('the match can continue scoring after being reopened', () => {
+    for (let i = 0; i < 18; i++) store().confirmDotBall()
+    store().extendOvers(1) // now 4 overs = 24 balls, cursor still 18
+    store().setBallRuns(18, 4)
+    expect(store().innings[0].balls[18].runs).toBe(4)
+    expect(store().currentBallIndex).toBe(19)
+  })
+
+  test('does not change phase when match is still in progress', () => {
+    store().setBallRuns(0, 4)
+    store().extendOvers(1)
+    expect(store().phase).toBe('scoring')
+  })
+})

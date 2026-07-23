@@ -26,6 +26,7 @@ type MatchState = {
   advanceInnings: () => void
   newMatch: () => void
   setVoiceAnnouncement: (enabled: boolean) => void
+  extendOvers: (additionalOvers: number) => void
 
   // Selectors
   totalRuns: () => number
@@ -254,6 +255,40 @@ export const useMatchStore = create<MatchState>()(
 
       setVoiceAnnouncement: (enabled: boolean) => {
         set({ voiceAnnouncement: enabled })
+      },
+
+      extendOvers: (additionalOvers: number) => {
+        set(state => {
+          if (!Number.isFinite(additionalOvers) || additionalOvers <= 0) {
+            return {}
+          }
+
+          const newOvers = state.overs + Math.floor(additionalOvers)
+          const newTotalBalls = newOvers * 6
+
+          const extendBalls = (balls: BallEntry[]): BallEntry[] => {
+            if (balls.length >= newTotalBalls) return balls
+            const extraBalls = Array(newTotalBalls - balls.length)
+              .fill(null)
+              .map(() => ({ runs: 0, isWicket: false }))
+            return [...balls, ...extraBalls]
+          }
+
+          const newInnings: [Innings, Innings] = [
+            { ...state.innings[0], balls: extendBalls(state.innings[0].balls) },
+            { ...state.innings[1], balls: extendBalls(state.innings[1].balls) },
+          ]
+
+          // If the match had already ended (all overs bowled / all out / chase resolved),
+          // extending the overs re-opens it so scoring can continue from the same cursor.
+          const wasCompleted = state.phase === 'inningsOver' || state.phase === 'result'
+
+          return {
+            overs: newOvers,
+            innings: newInnings,
+            phase: wasCompleted ? 'scoring' : state.phase,
+          }
+        })
       },
 
       newMatch: () => {

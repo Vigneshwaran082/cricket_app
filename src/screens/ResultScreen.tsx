@@ -4,6 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context'
 import type { NativeStackScreenProps } from '@react-navigation/native-stack'
 import { COLORS, RADIUS, SHADOW } from '../theme'
 import { useMatchStore } from '../store/matchStore'
+import { ExtendOversButton } from '../components/ExtendOversButton'
 
 type RootStackParamList = {
   Setup: undefined
@@ -72,6 +73,9 @@ export const ResultScreen: React.FC<Props> = ({ navigation }) => {
 
   return (
     <SafeAreaView style={styles.container}>
+      <View style={styles.toolbar}>
+        <ExtendOversButton onExtended={() => navigation.replace('Scoring')} />
+      </View>
       <View style={styles.content}>
         {/* Header */}
         <Text style={styles.heading}>🏏 Match Result</Text>
@@ -138,6 +142,12 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: COLORS.background,
+  },
+  toolbar: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    paddingHorizontal: 16,
+    paddingTop: 8,
   },
   content: {
     flex: 1,

@@ -2,6 +2,7 @@ import React from 'react'
 import { View, Text, StyleSheet, Pressable } from 'react-native'
 import { COLORS } from '../theme'
 import { useMatchStore } from '../store/matchStore'
+import { ExtendOversButton } from './ExtendOversButton'
 
 interface ScoreBarProps {
   onHomePress?: () => void
@@ -73,13 +74,16 @@ export const ScoreBar: React.FC<ScoreBarProps> = ({ onHomePress, displayInnings,
         <View style={styles.rightSection}>
           <Text style={styles.overs}>({oversBowled})</Text>
           {onHomePress && (
-            <Pressable 
-              onPress={onHomePress}
-              style={styles.homeButton}
-              hitSlop={8}
-            >
-              <Text style={styles.homeIcon}>🏠</Text>
-            </Pressable>
+            <>
+              <ExtendOversButton />
+              <Pressable 
+                onPress={onHomePress}
+                style={styles.homeButton}
+                hitSlop={8}
+              >
+                <Text style={styles.homeIcon}>🏠</Text>
+              </Pressable>
+            </>
           )}
         </View>
       </View>
