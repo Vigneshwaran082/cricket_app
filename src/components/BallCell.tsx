@@ -9,6 +9,7 @@ type Props = {
   ballNumberInOver: number
   isBowled: boolean
   isCurrent: boolean
+  isSelected?: boolean
   onTap: () => void
   onDoubleTap: () => void
 }
@@ -22,6 +23,7 @@ export const BallCell: React.FC<Props> = ({
   ballNumberInOver,
   isBowled,
   isCurrent,
+  isSelected = false,
   onTap,
   onDoubleTap,
 }) => {
@@ -93,6 +95,12 @@ export const BallCell: React.FC<Props> = ({
 
   const { bg, textColor, label, bordered, borderColor } = getVisual()
 
+  // A manually selected past ball (for correction) gets a highlighted border
+  // regardless of its normal visual state, so it's clear which ball the
+  // static NumberPad below will update next.
+  const finalBorderColor = isSelected ? COLORS.text : borderColor
+  const finalBorderWidth = isSelected ? 3 : (bordered ? 3 : 0)
+
   return (
     <Pressable
       onPress={handlePress}
@@ -101,8 +109,8 @@ export const BallCell: React.FC<Props> = ({
         styles.cell,
         {
           backgroundColor: bg,
-          borderWidth: bordered ? 3 : 0,
-          borderColor,
+          borderWidth: finalBorderWidth,
+          borderColor: finalBorderColor,
         },
         isBowled && styles.shadow,
         pressed && (isBowled || isCurrent) && styles.pressed,

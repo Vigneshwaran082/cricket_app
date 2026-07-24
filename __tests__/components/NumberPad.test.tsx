@@ -3,10 +3,10 @@ import { render, screen, fireEvent } from '@testing-library/react-native'
 import { NumberPad } from '../../src/components/NumberPad'
 
 const defaultProps = {
-  visible: true,
   onSelect: jest.fn(),
   onWicket: jest.fn(),
-  onClose: jest.fn(),
+  onUndo: jest.fn(),
+  undoDisabled: false,
 }
 
 afterEach(() => jest.clearAllMocks())
@@ -16,7 +16,6 @@ describe('NumberPad', () => {
     render(<NumberPad {...defaultProps} />)
     fireEvent.press(screen.getByText('4'))
     expect(defaultProps.onSelect).toHaveBeenCalledWith(4)
-    expect(defaultProps.onClose).toHaveBeenCalled()
   })
 
   test('calls onSelect(0) for dot ball', () => {
@@ -39,7 +38,6 @@ describe('NumberPad', () => {
     render(<NumberPad {...defaultProps} />)
     fireEvent.press(screen.getByText('W'))
     expect(defaultProps.onWicket).toHaveBeenCalledTimes(1)
-    expect(defaultProps.onClose).toHaveBeenCalled()
   })
 
   test('21. shows title and renders all 8 buttons (0-6, W)', () => {
@@ -48,5 +46,22 @@ describe('NumberPad', () => {
     for (const label of ['0', '1', '2', '3', '4', '5', '6', 'W']) {
       expect(screen.getByText(label)).toBeTruthy()
     }
+  })
+
+  test('is always rendered — no visible/hidden toggle needed', () => {
+    render(<NumberPad {...defaultProps} />)
+    expect(screen.getByText('↶ Undo')).toBeTruthy()
+  })
+
+  test('calls onUndo when the Undo button is tapped', () => {
+    render(<NumberPad {...defaultProps} />)
+    fireEvent.press(screen.getByText('↶ Undo'))
+    expect(defaultProps.onUndo).toHaveBeenCalledTimes(1)
+  })
+
+  test('Undo button is disabled when undoDisabled is true', () => {
+    render(<NumberPad {...defaultProps} undoDisabled />)
+    fireEvent.press(screen.getByText('↶ Undo'))
+    expect(defaultProps.onUndo).not.toHaveBeenCalled()
   })
 })

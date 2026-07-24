@@ -9,7 +9,7 @@ import {
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import type { NativeStackScreenProps } from '@react-navigation/native-stack'
-import { COLORS, RADIUS, SHADOW } from '../theme'
+import { COLORS, RADIUS } from '../theme'
 import { ScoreBar } from '../components/ScoreBar'
 import { BallCell } from '../components/BallCell'
 import { NumberPad } from '../components/NumberPad'
@@ -31,8 +31,9 @@ type Props = NativeStackScreenProps<RootStackParamList, 'Scoring'>
 const OVER_ROW_HEIGHT = 80 // approximate height of each over row
 
 export const ScoringScreen: React.FC<Props> = ({ navigation, route }) => {
-  const [numberPadVisible, setNumberPadVisible] = useState(false)
-  const [selectedBallIndex, setSelectedBallIndex] = useState(0)
+  // null = target the current ball (the common case). Set when the user
+  // taps a past bowled ball to correct it via the static NumberPad below.
+  const [selectedBallIndex, setSelectedBallIndex] = useState<number | null>(null)
   const scrollViewRef = useRef<ScrollView>(null)
 
   const innings = useMatchStore(state => state.innings)
@@ -43,7 +44,6 @@ export const ScoringScreen: React.FC<Props> = ({ navigation, route }) => {
 
   const setBallRuns = useMatchStore(state => state.setBallRuns)
   const toggleWicket = useMatchStore(state => state.toggleWicket)
-  const confirmDotBall = useMatchStore(state => state.confirmDotBall)
   const undoLastBall = useMatchStore(state => state.undoLastBall)
   const newMatch = useMatchStore(state => state.newMatch)
 
@@ -54,6 +54,9 @@ export const ScoringScreen: React.FC<Props> = ({ navigation, route }) => {
   const displayInnings: 0 | 1 = isReadOnly ? (viewInnings ?? currentInnings) : currentInnings
   const balls = innings[displayInnings].balls
   const displayBallIndex = isReadOnly ? balls.length : currentBallIndex
+
+  // The ball the static NumberPad will update on the next press.
+  const targetBallIndex = selectedBallIndex ?? currentBallIndex
 
   // Watch for phase changes to navigate away
   useEffect(() => {
@@ -75,12 +78,18 @@ export const ScoringScreen: React.FC<Props> = ({ navigation, route }) => {
     }
   }, [currentBallIndex, isReadOnly])
 
+  // Reset the selection back to "current ball" whenever the cursor advances,
+  // so the static pad always targets the next ball unless the user taps
+  // another past ball to correct it.
+  useEffect(() => {
+    setSelectedBallIndex(null)
+  }, [currentBallIndex])
+
   const handleBallTap = (index: number) => {
     if (isReadOnly) return
-    // Guard: only open NumberPad for current or already-bowled balls
+    // Guard: only select current or already-bowled balls
     if (index > currentBallIndex) return
     setSelectedBallIndex(index)
-    setNumberPadVisible(true)
   }
 
   const handleBallDoubleTap = (index: number) => {
@@ -91,11 +100,15 @@ export const ScoringScreen: React.FC<Props> = ({ navigation, route }) => {
   }
 
   const handleNumberPadSelect = (runs: number) => {
-    setBallRuns(selectedBallIndex, runs)
+    setBallRuns(targetBallIndex, runs)
   }
 
   const handleNumberPadWicket = () => {
-    toggleWicket(selectedBallIndex)
+    toggleWicket(targetBallIndex)
+  }
+
+  const handleUndo = () => {
+    undoLastBall()
   }
 
   // Compute total runs for a specific over (balls 0-5, 6-11, etc.)
@@ -184,6 +197,7 @@ export const ScoringScreen: React.FC<Props> = ({ navigation, route }) => {
                         ballNumberInOver={ballInOverIndex + 1}
                         isBowled={isReadOnly || globalIndex < displayBallIndex}
                         isCurrent={!isReadOnly && globalIndex === displayBallIndex}
+                        isSelected={!isReadOnly && selectedBallIndex === globalIndex}
                         onTap={() => handleBallTap(globalIndex)}
                         onDoubleTap={() => handleBallDoubleTap(globalIndex)}
                       />
@@ -205,39 +219,11 @@ export const ScoringScreen: React.FC<Props> = ({ navigation, route }) => {
       </ScrollView>
 
       {!isReadOnly && (
-        <View style={styles.buttonContainer}>
-          <Pressable
-            style={({ pressed }) => [
-              styles.nextBallButton,
-              pressed && styles.pressed,
-            ]}
-            onPress={confirmDotBall}
-          >
-            <Text style={styles.nextBallText}>Next Ball (Dot) →</Text>
-          </Pressable>
-
-          <Pressable
-            style={({ pressed }) => [
-              styles.undoButton,
-              isUndoDisabled && styles.undoDisabled,
-              pressed && !isUndoDisabled && styles.pressed,
-            ]}
-            onPress={undoLastBall}
-            disabled={isUndoDisabled}
-          >
-            <Text style={[styles.undoText, isUndoDisabled && styles.undoTextDisabled]}>
-              ↶ Undo
-            </Text>
-          </Pressable>
-        </View>
-      )}
-
-      {!isReadOnly && (
         <NumberPad
-          visible={numberPadVisible}
           onSelect={handleNumberPadSelect}
           onWicket={handleNumberPadWicket}
-          onClose={() => setNumberPadVisible(false)}
+          onUndo={handleUndo}
+          undoDisabled={isUndoDisabled}
         />
       )}
     </SafeAreaView>
@@ -311,46 +297,6 @@ const styles = StyleSheet.create({
     height: 1,
     backgroundColor: COLORS.border,
     marginVertical: 4,
-  },
-  buttonContainer: {
-    paddingHorizontal: 12,
-    paddingBottom: 16,
-    paddingTop: 8,
-    gap: 8,
-  },
-  nextBallButton: {
-    backgroundColor: COLORS.primary,
-    paddingVertical: 16,
-    borderRadius: RADIUS,
-    alignItems: 'center',
-    justifyContent: 'center',
-    minHeight: 48,
-    ...SHADOW,
-  },
-  nextBallText: {
-    color: COLORS.card,
-    fontSize: 17,
-    fontWeight: '600',
-  },
-  undoButton: {
-    backgroundColor: COLORS.undo,
-    paddingVertical: 16,
-    borderRadius: RADIUS,
-    alignItems: 'center',
-    justifyContent: 'center',
-    minHeight: 48,
-    ...SHADOW,
-  },
-  undoDisabled: {
-    opacity: 0.4,
-  },
-  undoText: {
-    color: COLORS.text,
-    fontSize: 17,
-    fontWeight: '600',
-  },
-  undoTextDisabled: {
-    color: COLORS.textLight,
   },
   pressed: {
     opacity: 0.75,
