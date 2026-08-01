@@ -80,4 +80,10 @@ describe('MatchSetupScreen', () => {
     fireEvent.press(screen.getByText('Start Match →'))
     expect(useMatchStore.getState().voiceAnnouncement).toBe(true)
   })
+
+  test('Toss Coin button navigates to the CoinToss screen', () => {
+    render(<MatchSetupScreen navigation={mockNavigation as any} route={{} as any} />)
+    fireEvent.press(screen.getByText('🪙 Toss Coin'))
+    expect(mockNavigation.navigate).toHaveBeenCalledWith('CoinToss')
+  })
 })

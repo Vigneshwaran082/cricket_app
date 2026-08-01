@@ -15,6 +15,7 @@ type RootStackParamList = {
   } | undefined
   InningsOver: undefined
   Result: undefined
+  CoinToss: undefined
 }
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Setup'>
@@ -67,6 +68,14 @@ export const MatchSetupScreen: React.FC<Props> = ({ navigation }) => {
       <View style={styles.header}>
         <Text style={styles.headerText}>🏏 New Match</Text>
       </View>
+
+      <TouchableOpacity
+        style={styles.tossButton}
+        onPress={() => navigation.navigate('CoinToss')}
+        activeOpacity={0.8}
+      >
+        <Text style={styles.tossButtonText}>🪙 Toss Coin</Text>
+      </TouchableOpacity>
 
       {/* Scrollable Content */}
       <ScrollView
@@ -146,6 +155,22 @@ const styles = StyleSheet.create({
   contentContainer: {
     paddingVertical: 16,
     paddingHorizontal: 16,
+  },
+  tossButton: {
+    backgroundColor: '#fbbf24',
+    marginTop: 16,
+    marginHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: RADIUS,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 44,
+    ...SHADOW,
+  },
+  tossButtonText: {
+    color: '#78350f',
+    fontSize: 16,
+    fontWeight: '600',
   },
   toggleRow: {
     flexDirection: 'row',

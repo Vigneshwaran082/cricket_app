@@ -6,6 +6,7 @@ import { MatchSetupScreen } from './src/screens/MatchSetupScreen'
 import { ScoringScreen } from './src/screens/ScoringScreen'
 import { InningsOverScreen } from './src/screens/InningsOverScreen'
 import { ResultScreen } from './src/screens/ResultScreen'
+import { CoinTossScreen } from './src/screens/CoinTossScreen'
 import { useMatchStore } from './src/store/matchStore'
 
 type RootStackParamList = {
@@ -17,6 +18,7 @@ type RootStackParamList = {
   } | undefined
   InningsOver: undefined
   Result: undefined
+  CoinToss: undefined
 }
 
 const Stack = createNativeStackNavigator<RootStackParamList>()
@@ -64,6 +66,7 @@ export default function App() {
         />
         <Stack.Screen name="InningsOver" component={InningsOverScreen} />
         <Stack.Screen name="Result" component={ResultScreen} />
+        <Stack.Screen name="CoinToss" component={CoinTossScreen} />
       </Stack.Navigator>
       <StatusBar style="auto" />
     </NavigationContainer>
